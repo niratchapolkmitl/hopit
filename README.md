@@ -1,6 +1,6 @@
 # Physical Computing Project 2026 - IT KMITL
 
-# HOPIT
+## HOPIT
 เกมกระโดดหลบสิ่งกีดขวางโดยใช้ sensor เป็นตัวส่งสัญญาณ ทำให้เกมเป็นแบบ touchless ที่ไม่เป็นจำเป็นต้องสัมผัส
 
 # Website
