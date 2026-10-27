@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HOPIT — เกมกบกระโดดหลบหินด้วย Arduino</title>
+<meta name="description" content="HOPIT โครงงานเกมโต้ตอบที่พัฒนาด้วย Arduino Uno R4 WiFi และเซนเซอร์อัลตราโซนิก">
+<script>document.documentElement.classList.add('js');</script>
+
+<!-- ฟอนต์: พยายามโหลด Google Sans (Flex) ก่อน และใช้ Noto Sans Thai รองรับอักขระไทย -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:wght@400;500;700;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;700;800&display=swap" rel="stylesheet">
+
+<style>
+/* ==========================================================
+   1) ตัวแปรสี / การตั้งค่าพื้นฐาน  (แก้สีหลักได้ที่นี่)
+   ========================================================== */
+:root{
+  --turq:#10DCCB;
+  --green:#26B96B;
+  --deep:#178B58;
+  --lime:#A7D93B;
+  --navy:#203A70;
+  --navy-dark:#172c58;
+  --white:#FFFFFF;
+  --bg:#EAF5FA;
+  --bg-soft:#F4FAFD;
+  --muted:#4a5d85;
+  --radius:22px;
+  --shadow:0 14px 34px rgba(32,58,112,.14);
+  --shadow-sm:0 6px 18px rgba(32,58,112,.10);
+  --font:'Google Sans','Google Sans Flex','Noto Sans Thai','Sarabun',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --s1:.5rem;--s2:1rem;--s3:1.5rem;--s4:2.5rem;--s5:4rem;--s6:6rem;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;font-family:var(--font);color:var(--navy);line-height:1.75;
+  background:var(--bg);overflow-x:hidden;-webkit-font-smoothing:antialiased;
+}
+img{max-width:100%;display:block}
+a{color:inherit}
+h1,h2,h3,h4,p{margin:0}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+:focus-visible{outline:3px solid var(--turq);outline-offset:3px;border-radius:8px}
+
+/* ฉากหลังอ่อนด้านนอกแคนวาส */
+.page-bg{position:fixed;inset:0;z-index:-1;overflow:hidden;background:var(--bg)}
+.page-bg i{position:absolute;border-radius:50%;background:#cfe6f5;opacity:.7}
+.page-bg i:nth-child(1){width:46vw;height:46vw;left:-14vw;top:-12vw}
+.page-bg i:nth-child(2){width:38vw;height:38vw;right:-12vw;top:10vh;background:#d9ecf8}
+.page-bg i:nth-child(3){width:42vw;height:42vw;left:20vw;bottom:-24vw;background:#c6e0f1}
+
+/* แคนวาสหลัก */
+.canvas{
+  max-width:1240px;margin:clamp(0px,2vw,28px) auto;background:var(--white);
+  border-radius:clamp(0px,2vw,30px);box-shadow:0 24px 60px rgba(32,58,112,.18);
+  overflow:hidden;position:relative;
+}
+.wrap{width:min(1080px,100% - 2.5rem);margin-inline:auto}
+
+/* ==========================================================
+   2) ปุ่ม
+   ========================================================== */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:.5rem;
+  min-height:48px;padding:.7rem 1.6rem;border-radius:999px;border:0;cursor:pointer;
+  font:700 1rem/1.2 var(--font);text-decoration:none;
+  transition:transform .2s ease,box-shadow .2s ease,background .2s ease;
+}
+.btn:hover{transform:translateY(-2px)}
+.btn-primary{background:var(--navy);color:#fff;box-shadow:0 10px 22px rgba(32,58,112,.35)}
+.btn-primary:hover{background:var(--navy-dark)}
+.btn-turq{background:var(--turq);color:var(--navy);box-shadow:0 8px 20px rgba(16,220,203,.4)}
+.btn-turq:hover{background:#0fcbbb}
+.btn-ghost{background:#fff;color:var(--navy);border:2px solid var(--navy)}
+.btn-ghost:hover{background:var(--bg-soft)}
+
+/* ==========================================================
+   3) แถบนำทาง
+   ========================================================== */
+.hero{position:relative;min-height:720px;padding-top:112px;padding-bottom:var(--s5)}
+.nav{
+  position:absolute;top:0;left:0;right:0;z-index:20;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:1.4rem clamp(1.25rem,4vw,3.4rem);
+}
+.logo{display:flex;align-items:center;gap:.6rem;text-decoration:none;font-weight:900;font-size:1.35rem;letter-spacing:.06em;color:var(--navy)}
+.logo-mark{width:28px;height:28px;position:relative}
+.logo-mark::before,.logo-mark::after{content:"";position:absolute;width:18px;height:18px;border-radius:4px}
+.logo-mark::before{left:0;top:0;background:var(--navy)}
+.logo-mark::after{right:0;bottom:0;background:var(--turq)}
+.nav-links{display:flex;align-items:center;gap:clamp(1rem,2.2vw,2.2rem);list-style:none;margin:0;padding:0}
+.nav-links a{color:#fff;text-decoration:none;font-weight:500;padding:.35rem 0;position:relative}
+.nav-links a:not(.btn)::after{content:"";position:absolute;left:0;bottom:-2px;height:3px;width:0;background:var(--lime);border-radius:3px;transition:width .25s}
+.nav-links a:not(.btn):hover::after,.nav-links a.active::after{width:100%}
+.nav-links .btn{padding:.55rem 1.4rem;min-height:44px}
+.burger{display:none;background:none;border:0;width:48px;height:48px;border-radius:12px;cursor:pointer;position:relative}
+.burger span,.burger span::before,.burger span::after{display:block;width:24px;height:3px;background:var(--navy);border-radius:3px;position:absolute;left:12px;transition:.25s}
+.burger span{top:22px}
+.burger span::before{content:"";top:-8px;left:0}
+.burger span::after{content:"";top:8px;left:0}
+.burger[aria-expanded="true"] span{background:transparent}
+.burger[aria-expanded="true"] span::before{top:0;transform:rotate(45deg)}
+.burger[aria-expanded="true"] span::after{top:0;transform:rotate(-45deg)}
+
+/* ==========================================================
+   4) ส่วนที่ 1 — หน้าแรก
+   ========================================================== */
+.hero-blob{
+  position:absolute;z-index:0;left:47%;right:0;top:-10%;bottom:7%;
+  background:var(--navy);
+  border-radius:220px 0 0 58% / 160px 0 0 52%;
+}
+.hero-blob::after{ /* ก้อนสีเทอร์ควอยซ์ซ้อนเล็กๆ ให้ดูเป็นอินทรีย์ */
+  content:"";position:absolute;right:-60px;bottom:-70px;width:260px;height:260px;border-radius:50%;
+  background:var(--turq);opacity:.18;
+}
+.hero-ring{position:absolute;z-index:0;left:-90px;bottom:-110px;width:320px;height:320px;border-radius:50%;background:var(--bg)}
+.hero-grid{position:relative;z-index:2;display:grid;grid-template-columns:1fr 1fr;gap:var(--s3);align-items:center}
+.hero-copy{padding-left:clamp(0rem,2vw,1.5rem);max-width:520px}
+.eyebrow{display:inline-block;font-weight:700;color:var(--deep);font-size:1rem;letter-spacing:.02em}
+.hero-copy .eyebrow{color:#c58f00;color:var(--deep)}
+.hero h1{font-size:clamp(3.6rem,10vw,7.2rem);line-height:1;font-weight:900;letter-spacing:.04em;margin:.4rem 0 .6rem;color:var(--navy)}
+.tagline{font-size:clamp(1.15rem,2.2vw,1.45rem);font-weight:700;color:var(--deep);margin-bottom:var(--s2)}
+.hero-copy p.lead{color:var(--navy);font-size:1.05rem;max-width:46ch}
+.hero-actions{display:flex;flex-wrap:wrap;gap:var(--s2);margin-top:var(--s3)}
+
+/* ฉากภาพประกอบ */
+.scene{position:relative;width:100%;max-width:520px;margin-inline:auto;aspect-ratio:1/1}
+.device{
+  position:absolute;left:20%;top:12%;width:60%;
+  background:var(--turq);border-radius:16px;padding:14px 14px 16px;
+  border-bottom:10px solid #0bb3a6;box-shadow:0 18px 30px rgba(0,0,0,.28);
+  transform:rotate(-3deg);
+}
+.lcd{background:#2d4f9c;border:4px solid #14264f;border-radius:6px;height:46px;position:relative;overflow:hidden}
+.lcd::after{content:"";position:absolute;left:10px;right:40%;top:14px;height:8px;border-radius:4px;background:rgba(255,255,255,.35)}
+.device-name{font-weight:900;color:#fff;text-align:center;letter-spacing:.18em;margin:.45rem 0 .2rem;font-size:1.05rem;text-shadow:2px 2px 0 var(--navy)}
+.patch{margin:0 auto;width:78%;background:var(--lime);border-radius:10px;padding:10px 0;display:flex;justify-content:center;gap:22px}
+.sensor-eye{width:34px;height:34px;border-radius:50%;background:#dfe7ee;border:4px solid #9aa9b8;position:relative}
+.sensor-eye::after{content:"";position:absolute;inset:6px;border-radius:50%;background:#3b4a63}
+.float{position:absolute;background:#fff;border-radius:14px;box-shadow:var(--shadow-sm);padding:.45rem .8rem;font-weight:700;font-size:.85rem;color:var(--navy);display:flex;align-items:center;gap:.5rem}
+.float.code{left:4%;top:6%;background:var(--lime)}
+.float.wifi{right:2%;top:38%}
+.float .dot{width:10px;height:10px;border-radius:50%;background:var(--green)}
+.ground{position:absolute;left:0;right:0;bottom:0;height:17%;background:var(--green);border-top:8px solid var(--lime);border-radius:0 0 0 0}
+.ground::after{content:"";position:absolute;left:0;right:0;bottom:0;height:40%;background:var(--deep)}
+.scene .px-frog{position:absolute;left:14%;bottom:14%;animation:hop 2.6s ease-in-out infinite}
+.scene .px-stone1{position:absolute;right:12%;bottom:15.5%}
+.scene .px-stone2{position:absolute;right:30%;bottom:15.5%}
+.scene .px-grass{position:absolute;left:46%;bottom:15.5%}
+.ripple{position:absolute;left:8%;bottom:4%;width:90px;height:22px;border:3px solid rgba(255,255,255,.35);border-radius:50%}
+@keyframes hop{0%,55%,100%{transform:translateY(0)}25%{transform:translateY(-34px)}}
+
+/* ==========================================================
+   5) หัวข้อส่วนต่างๆ
+   ========================================================== */
+.section{padding:var(--s6) 0 var(--s5);position:relative}
+.section-head{max-width:640px;margin-bottom:var(--s4)}
+.section-head h2{font-size:clamp(2rem,4.5vw,3rem);line-height:1.2;font-weight:900;margin:.2rem 0 .8rem}
+.section-head p{color:var(--muted)}
+.bar{display:block;width:64px;height:6px;border-radius:6px;background:linear-gradient(90deg,var(--turq),var(--green));margin:.6rem 0 0}
+section[id],.sub[id]{scroll-margin-top:16px}
+
+.card{background:#fff;border-radius:var(--radius);box-shadow:var(--shadow-sm);padding:var(--s3);transition:transform .25s ease,box-shadow .25s ease}
+.card:hover{transform:translateY(-5px);box-shadow:var(--shadow)}
+
+/* ==========================================================
+   6) ส่วนที่ 2 — บทคัดย่อ
+   ========================================================== */
+#abstract{background:var(--bg-soft)}
+#abstract::before{content:"";position:absolute;right:-120px;top:-60px;width:340px;height:340px;border-radius:50%;background:rgba(16,220,203,.12)}
+.abstract-box{
+  position:relative;background:#fff;border-radius:28px;box-shadow:var(--shadow);
+  padding:clamp(1.5rem,4vw,3rem);border-left:10px solid var(--turq);
+}
+.abstract-box p{text-indent:2em;margin-bottom:1rem;text-align:justify;text-justify:inter-character}
+.abstract-box p:last-child{margin-bottom:0}
+.note-strip{margin-top:var(--s3);padding:.9rem 1.2rem;border-radius:14px;background:#eafaf3;color:var(--deep);font-weight:500;font-size:.95rem;border:1px dashed var(--green)}
+.info-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--s3);margin-top:var(--s4)}
+.info-card{text-align:left}
+.icon-tile{width:64px;height:64px;border-radius:18px;display:grid;place-items:center;background:linear-gradient(135deg,var(--turq),var(--green));margin-bottom:var(--s2)}
+.info-card h3{font-size:1.2rem;margin-bottom:.3rem}
+.info-card p{color:var(--muted);font-size:.97rem}
+
+/* ==========================================================
+   7) ส่วนที่ 3 — รายละเอียดโครงงาน
+   ========================================================== */
+.sub{margin-top:var(--s6)}
+.sub:first-of-type{margin-top:var(--s4)}
+.sub-title{font-size:clamp(1.5rem,3vw,2.1rem);font-weight:900;margin-bottom:.4rem}
+.sub-lead{color:var(--muted);margin-bottom:var(--s3);max-width:62ch}
+
+/* A */
+.overview{display:grid;grid-template-columns:1.1fr .9fr;gap:var(--s4);align-items:center}
+.overview-text p{margin-bottom:1rem}
+.placeholder-note{display:block;padding:.8rem 1rem;border-radius:12px;background:#fff7d6;border:1px dashed #d4a800;color:#6b5400;font-size:.93rem}
+.flow{background:var(--navy);border-radius:28px;padding:var(--s3);display:grid;gap:.4rem;position:relative;overflow:hidden}
+.flow::before{content:"";position:absolute;right:-50px;top:-50px;width:150px;height:150px;border-radius:50%;background:rgba(16,220,203,.18)}
+.flow-title{color:#bfe9f5;font-size:.9rem;margin-bottom:.4rem;position:relative}
+.flow-step{background:#fff;border-radius:14px;padding:.7rem 1rem;display:flex;align-items:center;gap:.9rem;font-weight:700;position:relative}
+.flow-step small{display:block;font-weight:400;color:var(--muted);font-size:.82rem;line-height:1.4}
+.flow-step .num{width:34px;height:34px;border-radius:10px;background:var(--turq);color:var(--navy);display:grid;place-items:center;flex:none;font-weight:900}
+.flow-arrow{text-align:center;color:var(--turq);font-weight:900;line-height:1;position:relative}
+
+/* B */
+.comp-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--s3)}
+.comp{display:flex;flex-direction:column;gap:.5rem}
+.comp-img{height:130px;border-radius:16px;background:var(--bg);display:grid;place-items:center;position:relative;overflow:hidden}
+.comp-img::before{content:"";position:absolute;left:-20px;bottom:-30px;width:90px;height:90px;border-radius:50%;background:rgba(38,185,107,.18)}
+.comp h3{font-size:1.15rem;line-height:1.35}
+.comp .en{display:block;font-size:.8rem;font-weight:500;color:var(--deep)}
+.comp p{color:var(--muted);font-size:.95rem}
+.px{position:relative;image-rendering:pixelated}
+
+/* C */
+.code-win{background:var(--navy);border-radius:20px;box-shadow:var(--shadow);overflow:hidden}
+.code-bar{display:flex;align-items:center;gap:.5rem;padding:.75rem 1rem;background:var(--navy-dark)}
+.code-bar .dots{display:flex;gap:7px}
+.code-bar .dots i{width:12px;height:12px;border-radius:50%;background:#ff6b6b}
+.code-bar .dots i:nth-child(2){background:#ffd166}
+.code-bar .dots i:nth-child(3){background:var(--green)}
+.code-bar .fname{flex:1;color:#aebfe0;font-size:.85rem;font-family:ui-monospace,Menlo,Consolas,monospace;margin-left:.5rem}
+.copy-btn{background:var(--turq);color:var(--navy);border:0;border-radius:999px;padding:.4rem 1rem;min-height:36px;font:700 .88rem var(--font);cursor:pointer;transition:.2s}
+.copy-btn:hover{background:var(--lime)}
+.code-win pre{margin:0;padding:1.2rem 1.4rem;overflow-x:auto;font:.92rem/1.7 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:#e6edff;tab-size:2}
+.t-kw{color:#7fe3ff}.t-fn{color:#ffd166}.t-cn{color:#c4a1ff}.t-num{color:#ff9f7a}.t-cm{color:#8aa0cf;font-style:italic}
+.code-note{margin-top:var(--s2);color:var(--muted);font-size:.95rem}
+
+/* D */
+.repo{
+  display:grid;grid-template-columns:1fr auto;gap:var(--s3);align-items:center;
+  background:linear-gradient(120deg,var(--turq),var(--green));color:var(--navy);
+  border-radius:28px;padding:clamp(1.5rem,4vw,2.6rem);position:relative;overflow:hidden;box-shadow:var(--shadow);
+}
+.repo::after{content:"";position:absolute;right:-40px;bottom:-70px;width:220px;height:220px;border-radius:50%;background:rgba(255,255,255,.2)}
+.repo h3{font-size:clamp(1.4rem,3vw,2rem);font-weight:900;margin-bottom:.4rem}
+.repo p{max-width:56ch}
+.repo-url{display:inline-block;margin-top:.8rem;padding:.35rem .8rem;border-radius:10px;background:rgba(255,255,255,.7);font:.85rem ui-monospace,Menlo,Consolas,monospace;word-break:break-all}
+.repo .btn{position:relative;z-index:2}
+
+/* E */
+.video-frame{position:relative;width:100%;aspect-ratio:16/9;border-radius:24px;overflow:hidden;box-shadow:var(--shadow);background:var(--navy)}
+.video-frame iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.video-ph{position:absolute;inset:0;display:grid;place-content:center;text-align:center;gap:.6rem;padding:1.5rem;color:#d8ecf7}
+.video-ph .play{width:76px;height:76px;border-radius:50%;background:var(--turq);margin-inline:auto;position:relative}
+.video-ph .play::after{content:"";position:absolute;left:30px;top:22px;border-left:26px solid var(--navy);border-top:16px solid transparent;border-bottom:16px solid transparent}
+
+/* F */
+.gallery{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--s3)}
+.shot{margin:0;border-radius:20px;overflow:hidden;background:#fff;box-shadow:var(--shadow-sm);transition:transform .25s,box-shadow .25s}
+.shot:hover{transform:translateY(-5px);box-shadow:var(--shadow)}
+.shot-media{position:relative;aspect-ratio:4/3;background:linear-gradient(135deg,#d6f6f2,#e1f5e2);display:grid;place-items:center;overflow:hidden}
+.shot-media img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:transform .4s}
+.shot:hover .shot-media img{transform:scale(1.05)}
+.shot-ph{padding:1rem;text-align:center;color:var(--deep);font-size:.9rem;font-weight:500}
+.shot-ph b{display:block;font-size:1rem;color:var(--navy);margin-top:.5rem}
+.shot figcaption{padding:.9rem 1.1rem;font-weight:700}
+
+/* G */
+.team{display:grid;grid-template-columns:repeat(5,1fr);gap:var(--s2)}
+.member{text-align:center;padding:var(--s3) var(--s2)}
+.avatar{width:92px;height:92px;border-radius:100%;margin:0 auto var(--s2);display:grid;place-items:center;border:4px solid #fff;box-shadow:var(--shadow-sm)}
+.member dl{margin:0}
+.member dt{font-size:.78rem;font-weight:700;color:var(--deep);margin-top:.6rem}
+.member dd{margin:0;color:var(--muted);font-size:.93rem;padding:.35rem .5rem;border-radius:10px;background:var(--bg-soft);border:1px dashed #b9d3e4}
+
+/* ==========================================================
+   8) ส่วนท้าย
+   ========================================================== */
+.footer{background:var(--navy);color:#dbe8ff;padding:var(--s5) 0 var(--s3);margin-top:var(--s6);position:relative;overflow:hidden}
+.footer::before{content:"";position:absolute;left:-80px;top:-100px;width:260px;height:260px;border-radius:50%;background:rgba(16,220,203,.12)}
+.footer-grid{display:grid;grid-template-columns:1.4fr 1fr;gap:var(--s4);position:relative}
+.footer .logo{color:#fff;margin-bottom:.6rem}
+.footer p{max-width:46ch;color:#bcd0f5}
+.footer ul{list-style:none;margin:0;padding:0;display:grid;gap:.5rem}
+.footer h4{color:#fff;margin-bottom:.6rem}
+.footer a{text-decoration:none;color:#bfe9f5}
+.footer a:hover{color:var(--lime)}
+.copy{margin-top:var(--s4);padding-top:var(--s2);border-top:1px solid rgba(255,255,255,.15);font-size:.88rem;color:#9fb6e3;position:relative}
+
+/* ==========================================================
+   9) แอนิเมชันตอนเลื่อนเจอ
+   ========================================================== */
+.js .reveal{opacity:0;transform:translateY(24px);transition:opacity .7s ease,transform .7s ease}
+.js .reveal.in{opacity:1;transform:none}
+
+/* ==========================================================
+   10) ตอบสนองหน้าจอ
+   ========================================================== */
+@media (max-width:1020px){
+  .team{grid-template-columns:repeat(3,1fr)}
+  .comp-grid,.gallery{grid-template-columns:repeat(2,1fr)}
+}
+@media (max-width:900px){
+  .hero{padding-top:100px}
+  .hero-blob{left:0;top:52%;bottom:0;border-radius:50% 50% 0 0 / 70px 70px 0 0}
+  .hero-ring{display:none}
+  .hero-grid{grid-template-columns:1fr}
+  .hero-copy{max-width:none}
+  .scene{max-width:440px;margin-top:var(--s3)}
+  .nav{background:#fff}
+  .burger{display:block}
+  .nav-links{
+    position:absolute;left:0;right:0;top:100%;background:#fff;flex-direction:column;align-items:stretch;
+    gap:0;padding:.5rem 1.25rem 1.2rem;box-shadow:0 18px 30px rgba(32,58,112,.18);
+    display:none;border-radius:0 0 22px 22px;
+  }
+  .nav-links.open{display:flex}
+  .nav-links a{color:var(--navy);display:block;padding:.85rem .2rem}
+  .nav-links a:not(.btn)::after{display:none}
+  .nav-links .btn{margin-top:.6rem;color:var(--navy)}
+  .overview,.repo,.footer-grid{grid-template-columns:1fr}
+  .info-cards{grid-template-columns:1fr}
+}
+@media (max-width:620px){
+  .section{padding:var(--s5) 0 var(--s4)}
+  .comp-grid,.gallery{grid-template-columns:1fr}
+  .team{grid-template-columns:repeat(2,1fr)}
+  .hero-actions .btn{flex:1 1 100%}
+  .abstract-box p{text-align:left}
+}
+@media (max-width:380px){ .team{grid-template-columns:1fr} }
+
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  *,*::before,*::after{animation:none!important;transition:none!important}
+  .js .reveal{opacity:1;transform:none}
+}
+</style>
+</head>
+
+<body>
+<div class="page-bg" aria-hidden="true"><i></i><i></i><i></i></div>
+
+<div class="canvas">
+
+  <!-- ===================== หน้าแรก ===================== -->
+  <header class="hero" id="home">
+    <div class="hero-blob" aria-hidden="true"></div>
+    <div class="hero-ring" aria-hidden="true"></div>
+
+    <nav class="nav" aria-label="เมนูหลัก">
+      <a class="logo" href="#home" aria-label="HOPIT กลับสู่หน้าแรก"><span class="logo-mark" aria-hidden="true"></span>HOPIT</a>
+      <button class="burger" id="burger" aria-label="เปิดหรือปิดเมนู" aria-expanded="false" aria-controls="menu"><span></span></button>
+      <ul class="nav-links" id="menu">
+        <li><a href="#home" class="active">หน้าแรก</a></li>
+        <li><a href="#abstract">บทคัดย่อ</a></li>
+        <li><a href="#details">รายละเอียดโครงงาน</a></li>
+        <li><a href="#team">สมาชิกในทีม</a></li>
+        <li><a href="#details" class="btn btn-turq">ดูโครงงาน</a></li>
+      </ul>
+    </nav>
+
+    <div class="wrap hero-grid">
+      <div class="hero-copy reveal">
+        <span class="eyebrow">โครงงานเกมโต้ตอบ</span>
+        <h1>HOPIT</h1>
+        <p class="tagline">กระโดด หลบหลีก เรียนรู้ผ่านการเล่น</p>
+        <p class="lead">HOPIT คือเกมโต้ตอบที่พัฒนาด้วย Arduino Uno R4 WiFi และเซนเซอร์อัลตราโซนิก ผู้เล่นจะควบคุมกบให้กระโดดหลบก้อนหินที่เข้ามาขวางทาง โดยเซนเซอร์จะตรวจจับระยะหรือการเคลื่อนไหวของผู้เล่น เพื่อให้การเล่นจริงส่งผลต่อเกมบนจอแสดงผล</p>
+        <div class="hero-actions">
+          <a class="btn btn-primary" href="#details">สำรวจโครงงาน</a>
+          <a class="btn btn-ghost" href="#video">ดูวิดีโอของโครงงาน</a>
+        </div>
+      </div>
+
+      <!-- ภาพประกอบหลัก: สร้างด้วย CSS + พิกเซลอาร์ต -->
+      <div class="scene reveal" role="img" aria-label="ภาพประกอบกล่อง HOPIT กบพิกเซลกำลังกระโดดหลบก้อนหิน">
+        <span class="float code">&lt;/&gt; โค้ด</span>
+        <span class="float wifi"><i class="dot"></i>R4 WiFi</span>
+        <div class="device">
+          <div class="lcd"></div>
+          <div class="device-name">HOPIT</div>
+          <div class="patch"><span class="sensor-eye"></span><span class="sensor-eye"></span></div>
+        </div>
+        <div class="ground"></div>
+        <span class="ripple"></span>
+        <div class="px px-frog" data-art="frog" data-unit="9"></div>
+        <div class="px px-grass" data-art="grass" data-unit="6"></div>
+        <div class="px px-stone2" data-art="stone" data-unit="6"></div>
+        <div class="px px-stone1" data-art="stone" data-unit="8"></div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- ===================== บทคัดย่อ ===================== -->
+    <section class="section" id="abstract" aria-labelledby="abstract-title">
+      <div class="wrap">
+        <div class="section-head reveal">
+          <span class="eyebrow">ส่วนที่ 1</span>
+          <h2 id="abstract-title">บทคัดย่อ<span class="bar"></span></h2>
+        </div>
+
+        <article class="abstract-box reveal">
+          <p>HOPIT เป็นโครงงานเกมโต้ตอบที่พัฒนาขึ้นโดยใช้ไมโครคอนโทรลเลอร์ Arduino Uno R4 WiFi ร่วมกับเซนเซอร์อัลตราโซนิก โดยมีวัตถุประสงค์เพื่อผสานความรู้พื้นฐานด้านการเขียนโปรแกรม อุปกรณ์อิเล็กทรอนิกส์ และการออกแบบเกมเข้าด้วยกัน ให้กลายเป็นประสบการณ์การเล่นเกมที่ผู้เล่นได้โต้ตอบกับอุปกรณ์จริง</p>
+          <p>เกมมีตัวละครเป็นกบที่ต้องกระโดดข้ามก้อนหินซึ่งปรากฏขึ้นเป็นสิ่งกีดขวาง เซนเซอร์อัลตราโซนิกทำหน้าที่ตรวจจับระยะหรือการโต้ตอบของผู้เล่น จากนั้น Arduino จะประมวลผลข้อมูลจากเซนเซอร์เพื่อกำหนดพฤติกรรมของเกม และมีจอ LCD สำหรับแสดงข้อมูลที่เกี่ยวข้อง เช่น สถานะของเกมหรือคะแนน ตามโปรแกรมที่พัฒนาขึ้น</p>
+          <p>ระบบประกอบด้วยบอร์ด Arduino Uno R4 WiFi, Breadboard, สายจัมเปอร์, จอ LCD, เซนเซอร์อัลตราโซนิก และกล่องที่ออกแบบและประดิษฐ์ขึ้นเอง โครงงานนี้แสดงให้เห็นแนวทางการนำไมโครคอนโทรลเลอร์และเซนเซอร์วัดระยะมาบูรณาการเป็นเกมโต้ตอบ และเปิดโอกาสให้ได้เรียนรู้เรื่องการเขียนโปรแกรมระบบฝังตัว การเชื่อมต่อฮาร์ดแวร์ และปฏิสัมพันธ์ระหว่างมนุษย์กับอุปกรณ์</p>
+          <!--<span class="note-strip">หมายเหตุ: ข้อความข้างต้นอธิบายวัตถุประสงค์และการทำงานที่ออกแบบไว้ ยังไม่ได้รวมผลการทดสอบหรือการวัดประสิทธิภาพ</span>-->
+        </article>
+
+        <div class="info-cards">
+          <div class="card info-card reveal">
+            <div class="icon-tile"><div class="px" data-art="chip" data-unit="4"></div></div>
+            <h3>อุปกรณ์อิเล็กทรอนิกส์</h3>
+            <p>ใช้บอร์ด Arduino Uno R4 WiFi ร่วมกับเซนเซอร์อัลตราโซนิกเป็นหัวใจของระบบ</p>
+          </div>
+          <div class="card info-card reveal">
+            <div class="icon-tile"><div class="px" data-art="sensor" data-unit="4"></div></div>
+            <h3>การโต้ตอบ</h3>
+            <p>ตรวจจับระยะและการโต้ตอบทางกายภาพของผู้เล่น เพื่อใช้ควบคุมเกม</p>
+          </div>
+          <div class="card info-card reveal">
+            <div class="icon-tile"><div class="px" data-art="frogmini" data-unit="4"></div></div>
+            <h3>การออกแบบเกม</h3>
+            <p>กบที่ต้องกระโดดข้ามก้อนหินซึ่งเป็นสิ่งกีดขวาง ในสไตล์พิกเซลอาร์ต</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== รายละเอียดโครงงาน ===================== -->
+    <section class="section" id="details" aria-labelledby="details-title">
+      <div class="wrap">
+        <div class="section-head reveal">
+          <span class="eyebrow">ส่วนที่ 2</span>
+          <h2 id="details-title">รายละเอียดโครงงาน<span class="bar"></span></h2>
+          <p>รวบรวมภาพรวม อุปกรณ์ ตัวอย่างโค้ด ซอร์สโค้ด วิดีโอ ภาพประกอบ และสมาชิกในทีม</p>
+        </div>
+
+        <!-- B. อุปกรณ์ -->
+        <div class="sub" id="components">
+          <h3 class="sub-title reveal">อุปกรณ์ที่ใช้</h3>
+          <p class="sub-lead reveal">อุปกรณ์ทั้งหกชิ้นที่ประกอบกันเป็นเกม HOPIT</p>
+          <div class="comp-grid">
+            <article class="card comp reveal">
+              <div class="comp-img"><div class="px" data-art="chip" data-unit="8"></div></div>
+              <h3>Arduino Uno R4 WiFi</h3>
+              <p>บอร์ดไมโครคอนโทรลเลอร์ที่ทำหน้าที่ประมวลผลข้อมูลจากเซนเซอร์และควบคุมการทำงานของเกม</p>
+            </article>
+            <article class="card comp reveal">
+              <div class="comp-img"><div class="px" data-art="breadboard" data-unit="8"></div></div>
+              <h3>Breadboard</h3>
+              <p>แผงต่อวงจรสำหรับเชื่อมต่ออุปกรณ์อิเล็กทรอนิกส์โดยไม่ต้องบัดกรี</p>
+            </article>
+            <article class="card comp reveal">
+              <div class="comp-img"><div class="px" data-art="wires" data-unit="8"></div></div>
+              <h3>Jumper wires</h3>
+              <p>สายไฟสำหรับเชื่อมต่อขาของบอร์ด เซนเซอร์ และจอแสดงผลเข้าด้วยกัน</p>
+            </article>
+            <article class="card comp reveal">
+              <div class="comp-img"><div class="px" data-art="lcd" data-unit="8"></div></div>
+              <h3>LCD Screen</h3>
+              <p>จอแสดงผลสำหรับแสดงข้อมูลของเกม เช่น สถานะเกมหรือคะแนน ตามที่โปรแกรมกำหนด</p>
+            </article>
+            <article class="card comp reveal">
+              <div class="comp-img"><div class="px" data-art="sensor" data-unit="8"></div></div>
+              <h3>Ultrasonic Sensor</h3>
+              <p>เซนเซอร์สำหรับวัดระยะ เพื่อตรวจจับการเคลื่อนไหวหรือการโต้ตอบของผู้เล่น</p>
+            </article>
+            <article class="card comp reveal">
+              <div class="comp-img"><div class="px" data-art="box" data-unit="8"></div></div>
+              <h3>กล่องที่ทำขึ้นเอง <span class="en">Custom-made box</span></h3>
+              <p>กล่องที่ออกแบบและประดิษฐ์เองสำหรับบรรจุอุปกรณ์ พร้อมลวดลายกบและบ่อน้ำสไตล์พิกเซล</p>
+            </article>
+          </div>
+        </div>
+
+                <!-- A. ภาพรวม -->
+        <div class="sub" id="overview">
+            <div class="flow reveal" aria-label="แผนภาพแนวคิดการทำงาน">
+              <div class="flow-title">แนวคิดการทำงานโดยสรุป</div>
+              <div class="flow-step"><span class="num">1</span><div>เซนเซอร์อัลตราโซนิก<small>ตรวจจับระยะหรือการโต้ตอบของผู้เล่น</small></div></div>
+              <div class="flow-arrow">▼</div>
+              <div class="flow-step"><span class="num">2</span><div>Arduino Uno R4 WiFi<small>ประมวลผลข้อมูลจากเซนเซอร์</small></div></div>
+              <div class="flow-arrow">▼</div>
+              <div class="flow-step"><span class="num">3</span><div>ตรรกะของเกม<small>กบกระโดดข้ามก้อนหิน</small></div></div>
+              <div class="flow-arrow">▼</div>
+              <div class="flow-step"><span class="num">4</span><div>จอ LCD<small>แสดงข้อมูลของเกม เช่น สถานะหรือคะแนน</small></div></div>
+          </div>
+        </div>
+
+        <!-- C. โค้ด -->
+        <div class="sub" id="code">
+          <h3 class="sub-title reveal">ตัวอย่างโค้ดโปรแกรม</h3>
+          <p class="sub-lead reveal">ตัวอย่างการอ่านระยะจากเซนเซอร์อัลตราโซนิกด้วย Arduino</p>
+          <div class="code-win reveal">
+            <div class="code-bar">
+              <div class="dots" aria-hidden="true"><i></i><i></i><i></i></div>
+
+            </div>
+            <pre><code id="codeBlock" aria-label="ตัวอย่างโค้ด Arduino"></code></pre>
+          </div>
+          <p class="code-note">หมายเหตุ: โค้ดนี้เป็นเพียงตัวอย่างประกอบการอธิบาย ไม่ใช่โค้ดฉบับสมบูรณ์ของโครงงาน สามารถตรวจสอบโค้ดตัวเต็มได้ที่ GitHub Repository</p>
+        </div>
+
+        <!-- D. GitHub -->
+        <div class="sub" id="repo">
+          <div class="repo reveal">
+            <div>
+              <h3>ซอร์สโค้ดของโครงงาน</h3>
+              <p>เข้าไปดูซอร์สโค้ดและรายละเอียดการพัฒนาของ HOPIT ได้ที่คลังโค้ดของโครงงาน</p>
+              <span class="repo-url" id="repoUrlText"></span>
+            </div>
+            <!-- ▼▼ ใส่ลิงก์ GitHub จริงที่ตัวแปร GITHUB_URL ในสคริปต์ด้านล่างของไฟล์นี้ ▼▼ -->
+            <a class="btn btn-primary" id="repoBtn" href="#" target="_blank" rel="noopener noreferrer">ดูซอร์สโค้ดบน GitHub</a>
+          </div>
+        </div>
+
+        <!-- E. วิดีโอ -->
+        <div class="sub" id="video">
+          <h3 class="sub-title reveal">วิดีโอสาธิตการทำงาน</h3>
+          <p class="sub-lead reveal">รับชมการทำงานของเกม HOPIT ตั้งแต่การตรวจจับระยะไปจนถึงการแสดงผลบนจอ</p>
+          <div class="video-frame reveal" id="videoFrame">
+            <!-- ▼▼ ใส่รหัสวิดีโอ YouTube จริงที่ตัวแปร YOUTUBE_VIDEO_ID ในสคริปต์ด้านล่าง ▼▼ -->
+            <div class="video-ph" id="videoPh">
+              <div class="play" aria-hidden="true"></div>
+              <strong>ยังไม่ได้ระบุวิดีโอสาธิต</strong>
+              <span>กำหนดรหัสวิดีโอ YouTube ที่ตัวแปร YOUTUBE_VIDEO_ID เพื่อแสดงวิดีโอตรงนี้</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- F. แกลเลอรี -->
+        <div class="sub" id="gallery">
+          <div class="gallery">
+            <figure class="shot reveal">
+              <div class="shot-media">
+                <div class="shot-ph">ตำแหน่งรูปภาพ<b>images/hopit-box.jpg</b></div>
+                <!-- ▼ เปลี่ยนเป็นรูปถ่ายกล่อง HOPIT จริง -->
+                <img src="images/hopit-box.jpg" alt="ภาพรวมของกล่อง HOPIT" loading="lazy" onerror="this.remove()">
+              </div>
+              <figcaption>ภาพรวมของกล่อง</figcaption>
+            </figure>
+            <figure class="shot reveal">
+              <div class="shot-media">
+                <div class="shot-ph">ตำแหน่งรูปภาพ<b>images/hopit-parts.jpg</b></div>
+                <!-- ▼ เปลี่ยนเป็นรูปอุปกรณ์ที่ใช้พัฒนา -->
+                <img src="images/tinkercad.png" alt="อุปกรณ์ที่ใช้ในการพัฒนา" loading="lazy" onerror="this.remove()">
+              </div>
+              <figcaption>Tinkercad ที่ใช้ในการพัฒนา</figcaption>
+            </figure>
+            <figure class="shot reveal">
+              <div class="shot-media">
+                <div class="shot-ph">ตำแหน่งรูปภาพ<b>images/hopit-playing.jpg</b></div>
+                <!-- ▼ เปลี่ยนเป็นรูปขณะทดลองเล่นเกม -->
+                <img src="images/hopit-playing.jpg" alt="ภาพขณะทดลองเล่นเกม" loading="lazy" onerror="this.remove()">
+              </div>
+              <figcaption>ภาพขณะทดลองเล่นเกม</figcaption>
+            </figure>
+          </div>
+        </div>
+
+        <!-- G. สมาชิก -->
+        <div class="sub" id="team">
+          <h3 class="sub-title reveal">สมาชิกในทีม</h3>
+          <div class="team">
+            <!-- ▼▼ สมาชิกคนที่ 1–5: แทนที่ข้อความ "กรอก..." ด้วยข้อมูลจริง ▼▼ -->
+            <article class="card member reveal">
+              <div><img src="images/members/68070017.png" class="avatar" loading="lazy" onerror="this.remove()"></div>
+              <dl><dt>รหัสนักศึกษา</dt><dd>68070017</dd><dt>ชื่อ–นามสกุล</dt><dd>จีรวรรณ น่วมขยัน</dd></dl>
+            </article>
+            <article class="card member reveal">
+              <div><img src="images/members/68070032.png" class="avatar" loading="lazy" onerror="this.remove()"></div>
+              <dl><dt>รหัสนักศึกษา</dt><dd>68070032</dd><dt>ชื่อ–นามสกุล</dt><dd>ญาณิศา จันทร์อุดม</dd></dl>
+            </article>
+            <article class="card member reveal">
+              <div><img src="images/members/68070078.png" class="avatar" loading="lazy" onerror="this.remove()"></div>
+              <dl><dt>รหัสนักศึกษา</dt><dd>68070078</dd><dt>ชื่อ–นามสกุล</dt><dd>นภัทร อยู่เจริญ</dd></dl>
+            </article>
+            <article class="card member reveal">
+              <div><img src="images/members/68070079.png" class="avatar" loading="lazy" onerror="this.remove()"></div>
+              <dl><dt>รหัสนักศึกษา</dt><dd>68070079</dd><dt>ชื่อ–นามสกุล</dt><dd>นภัสวรรณ เกิดแก้ว</dd></dl>
+            </article>
+            <article class="card member reveal">
+              <div><img src="images/members/68070089.png" class="avatar" loading="lazy" onerror="this.remove()"></div>
+              <dl><dt>รหัสนักศึกษา</dt><dd>68070089</dd><dt>ชื่อ–นามสกุล</dt><dd>นิรัชพล กลิ่นขจร</dd></dl>
+            </article>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ===================== ส่วนท้าย ===================== -->
+  <footer class="footer">
+    <div class="wrap">
+      <div class="footer-grid">
+        <div>
+          <a class="logo" href="#home"><span class="logo-mark" aria-hidden="true"></span>HOPIT</a>
+          <p>เว็บไซต์นี้นำเสนอโครงงานเกมโต้ตอบที่นักศึกษาพัฒนาขึ้น ด้วย Arduino Uno R4 WiFi และเซนเซอร์อัลตราโซนิก</p>
+        </div>
+      </div>
+    </div>
+  </footer>
+</div>
+
+<script>
+/* ==========================================================
+   การตั้งค่าที่ต้องแก้ไข (CONFIG)
+   ========================================================== */
+const CONFIG = {
+  // TODO: ใส่ลิงก์ GitHub จริงของโครงงานที่นี่
+  GITHUB_URL: 'https://github.com/niratchapolkmitl/hopit',
+  // TODO: ใส่รหัสวิดีโอ YouTube จริงที่นี่ (เช่น ส่วนหลัง v= ในลิงก์) แทนที่ YOUR_VIDEO_ID
+  YOUTUBE_VIDEO_ID: 'YOUR_VIDEO_ID'
+};
+
+/* ==========================================================
+   พิกเซลอาร์ต: วาดจากแผนที่ตัวอักษรด้วย box-shadow
+   ========================================================== */
+const PAL = {c:'#10DCCB',n:'#203A70',w:'#FFFFFF',g:'#26B96B',d:'#178B58',y:'#A7D93B',
+             s:'#9fb3c8',t:'#6f87a6',k:'#14213d',b:'#3b6bd6',r:'#e05a5a',v:'#d3dde6'};
+const ART = {
+  frog:["..dd....dd..",".dwkd..dwkd.",".dggggggggd.","dggggggggggd","dggyyyyyyggd","dgyyyyyyyygd",".dgyyyyyygd.","dgg.dggd.ggd","ddd......ddd"],
+  frogmini:["..dd....dd..",".dwkd..dwkd.","dgggggggggg d".replace(' ',''),"dggggggggggd",".dggyyyyggd.","..dggggggd.."],
+  stone:["..tttt..",".tsssst.","tssssstt","tsstssst","tssssstt",".tttttt."],
+  grass:["..y...y.",".yg.y.gy",".gg.gg.g","dgdgdgdg"],
+  chip:["cccccccccccc","cnnnnnnc.vvc","cnwwwwnc.vvc","cnnnnnnc...c","cccccccccccc","kkkkkkkkkkkk"],
+  breadboard:["rrrrrrrrrrrr","wwwwwwwwwwww","wkwkwkwkwkwk","wwwwwwwwwwww","wkwkwkwkwkwk","bbbbbbbbbbbb"],
+  wires:["rr..........",".rr.........","..rrgg......","....ggyy....","......yynn..","........nn.."],
+  lcd:["kkkkkkkkkkkk","kbbbbbbbbbbk","kbwwbwwbbbbk","kbbbbbbbbbbk","kbbbbbbbbbbk","kkkkkkkkkkkk"],
+  sensor:["cccccccccccc","crrrccccrrrc","crkkrccrkkrc".replace(/r/g,'v'),"cvvvccccvvvc","cccccccccccc","cccckkkkcccc"],
+  box:["..cccccccc..",".cccnnnnccc.","cccccccccccc","gggggggggggg","gggyggggggyg","gggggggggggg","dddddddddddd"]
+};
+// แก้สีวงกลมของเซนเซอร์ให้เป็นสีเงิน (แทนที่ r ด้วย v ในแถวที่ 2)
+ART.sensor[1] = "cvvvccccvvvc";
+
+function paint(el){
+  const map = ART[el.dataset.art]; if(!map) return;
+  const u = parseInt(el.dataset.unit,10) || 6, sh = [];
+  map.forEach((row,y)=>[...row].forEach((ch,x)=>{
+    if(ch!=='.' && PAL[ch]) sh.push(`${x*u}px ${y*u}px 0 ${PAL[ch]}`);
+  }));
+  el.style.width  = Math.max(...map.map(r=>r.length))*u+'px';
+  el.style.height = map.length*u+'px';
+  const d = document.createElement('div');
+  d.style.cssText = `width:${u}px;height:${u}px;box-shadow:${sh.join(',')}`;
+  el.appendChild(d);
+}
+document.querySelectorAll('.px[data-art]').forEach(paint);
+
+/* ==========================================================
+   ตัวอย่างโค้ด + ไฮไลต์ไวยากรณ์ + ปุ่มคัดลอก
+   ========================================================== */
+const CODE = `#include <LiquidCrystal_I2C.h>
+#include <Wire.h>
+
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+
+const int trig = 4; //trig
+const int echo = 2; //echo
+
+int frogY = 1; // 1 walk - 0 jump
+bool isJumping = false;
+int jumpTimer = 0;
+int score = 0;
+bool gameOver = false;
+
+//make things
+const int Max_things = 3;
+int thingsX[Max_things]; // แกนx (0-15)
+int thingsY[Max_things]; // แกนy (1 walk - 0 jump)
+bool thingActive[Max_things]; // เปิดใช้งานอุปสรรคนั้นๆ
+
+//check hand wave
+float getDistance() {
+  digitalWrite(trig, LOW);
+  delayMicroseconds(2);
+  digitalWrite(trig, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trig, LOW);
+  
+  long duration = pulseIn(echo, HIGH, 30000); // กันค้าง - timeout 30ms
+  if (duration == 0) return 999; //อ่านค่าไม่ได้ให้คืนค่าไกล
+  return (duration * 0.0343) / 2.0;
+}
+
+void resetGame() {
+  score = 0;
+  frogY = 1;
+  isJumping = false;
+  gameOver = false;
+  
+  for (int i = 0; i < Max_things; i++) {
+    thingActive[i] = false;
+  }
+  
+  //random first thing ti show on lcd
+  thingsX[0] = 15;
+  thingsY[0] = random(0, 2);
+  thingActive[0] = true;
+}
+
+void setup() {
+  pinMode(trig, OUTPUT);
+  pinMode(echo, INPUT);
+  
+  randomSeed(analogRead(0));
+  
+  lcd.init();
+  lcd.backlight();
+  lcd.createChar(0, frog_walk);
+  lcd.createChar(1, frog_jump);
+  lcd.createChar(2, things_top);
+  lcd.createChar(3, things_below);
+  
+  lcd.setCursor(3, 0);
+  lcd.print("Frog Hop!");
+  lcd.setCursor(2,1);
+  lcd.print("Wave to Jump");
+  delay(2000);
+  lcd.clear();
+}
+
+void loop() {
+  if (gameOver) {
+    lcd.setCursor(3, 0);
+    lcd.print("GAME OVER!");
+    lcd.setCursor(3, 1);
+    lcd.print("Score: ");
+    lcd.print(score);
+    
+    if (getDistance() >= 2.0 && getDistance() <= 15.0) {
+      resetGame();
+      lcd.clear();
+      delay(500);
+    }
+  return;
+  }
+  
+  //read distance
+  float dist = getDistance();
+  
+  //wave hand in 2-15 cm. and  frog isn't jumping
+  if (dist >= 2.0 && dist <= 15.0 && !isJumping) {
+    isJumping = true;
+    frogY = 0; //กระโดดขึ้นแถวบน
+    jumpTimer = 0; // รีเซ็ตเวลาลอยตัว
+  }
+  
+  //manage time jumping
+  if (isJumping) {
+    jumpTimer++;
+    if (jumpTimer > 3) {
+      frogY = 1; // go down to wallk
+      isJumping = false;
+    }
+  }
+  
+  // move things
+  for (int i = 0; i < Max_things; i++) {
+    if (thingActive[i]) {
+      thingsX[i]--;
+      
+      if (thingsX[i] == 1 && frogY == thingsY[i]) {
+        gameOver = true;
+      }
+      
+      if (thingsX[i] < 0) {
+        thingActive[i] = false;
+        score++;
+      }
+    }
+  }
+  
+  //randoem show things on lcd and check that how far thing go from right panel
+  int rightX = 0;
+  for (int i = 0; i < Max_things; i++) {
+    if (thingActive[i] && thingsX[i] > rightX) {
+      rightX = thingsX[i];
+    }
+  }
+ 
+  lcd.clear();
+
+  // draw things
+  for (int i = 0; i < Max_things; i++) {
+    if (thingActive[i] && thingsX[i] >= g0 && thingsX[i] <= 15) {
+      lcd.setCursor(thingsX[i],thingsY[i]);
+      if (thingsY[i] == 1) {
+        lcd.write(2);
+      }
+      else {
+        lcd.write(3);
+      }
+    }
+  }
+
+  delay(200);
+}
+`;
+
+function highlight(src){
+  const esc = src.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  return esc.replace(
+    /(\/\/.*)|\b(const|int|long|void|return)\b|\b(pinMode|digitalWrite|delayMicroseconds|pulseIn|delay|setup|loop|readDistanceCm|println|begin)\b|\b(HIGH|LOW|OUTPUT|INPUT|Serial)\b|\b(\d+(?:\.\d+)?)\b/g,
+    (m,cm,kw,fn,cn,num)=>
+      cm ? `<span class="t-cm">${m}</span>` :
+      kw ? `<span class="t-kw">${m}</span>` :
+      fn ? `<span class="t-fn">${m}</span>` :
+      cn ? `<span class="t-cn">${m}</span>` :
+      num? `<span class="t-num">${m}</span>` : m);
+}
+document.getElementById('codeBlock').innerHTML = highlight(CODE);
+
+/*const copyBtn = document.getElementById('copyBtn');
+function fallbackCopy(text){
+  const ta = document.createElement('textarea');
+  ta.value = text; ta.style.position='fixed'; ta.style.opacity='0';
+  document.body.appendChild(ta); ta.select();
+  try{ document.execCommand('copy'); }catch(e){}
+  document.body.removeChild(ta);
+}
+copyBtn.addEventListener('click', async ()=>{
+  try{
+    if(navigator.clipboard && window.isSecureContext){ await navigator.clipboard.writeText(CODE); }
+    else{ fallbackCopy(CODE); }
+    copyBtn.textContent = 'คัดลอกแล้ว ✓';
+  }catch(e){
+    fallbackCopy(CODE);
+    copyBtn.textContent = 'คัดลอกแล้ว ✓';
+  }
+  setTimeout(()=>{ copyBtn.textContent = 'คัดลอกโค้ด'; }, 2000);
+});
+*/
+/* ==========================================================
+   GitHub และ YouTube
+   ========================================================== */
+document.getElementById('repoBtn').href = CONFIG.GITHUB_URL;
+document.getElementById('repoUrlText').textContent = CONFIG.GITHUB_URL;
+
+(function(){
+  const id = CONFIG.YOUTUBE_VIDEO_ID;
+  if(!id || id === 'YOUR_VIDEO_ID') return; // ยังไม่ได้ตั้งค่า: แสดงกล่องแจ้งแทน
+  const f = document.createElement('iframe');
+  f.src = 'https://www.youtube.com/embed/' + encodeURIComponent(id);
+  f.title = 'วิดีโอสาธิตการทำงานของ HOPIT';
+  f.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
+  f.allowFullscreen = true; f.loading = 'lazy';
+  document.getElementById('videoPh').remove();
+  document.getElementById('videoFrame').appendChild(f);
+})();
+
+/* ==========================================================
+   เมนูมือถือ
+   ========================================================== */
+const burger = document.getElementById('burger'), menu = document.getElementById('menu');
+burger.addEventListener('click', ()=>{
+  const open = menu.classList.toggle('open');
+  burger.setAttribute('aria-expanded', open);
+});
+menu.querySelectorAll('a').forEach(a=>a.addEventListener('click',()=>{
+  menu.classList.remove('open'); burger.setAttribute('aria-expanded','false');
+}));
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){ menu.classList.remove('open'); burger.setAttribute('aria-expanded','false'); }
+});
+
+/* ==========================================================
+   แอนิเมชันตอนเลื่อนเจอ + ไฮไลต์เมนูปัจจุบัน
+   ========================================================== */
+const reveals = document.querySelectorAll('.reveal');
+if('IntersectionObserver' in window){
+  const io = new IntersectionObserver((es)=>es.forEach(e=>{
+    if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); }
+  }),{threshold:.12});
+  reveals.forEach(r=>io.observe(r));
+}else{ reveals.forEach(r=>r.classList.add('in')); }
+
+const links = [...document.querySelectorAll('.nav-links a:not(.btn)')];
+const targets = links.map(a=>document.querySelector(a.getAttribute('href')));
+window.addEventListener('scroll',()=>{
+  const y = window.scrollY + 160; let cur = 0;
+  targets.forEach((t,i)=>{ if(t && t.getBoundingClientRect().top + window.scrollY <= y) cur = i; });
+  links.forEach((a,i)=>a.classList.toggle('active', i===cur));
+},{passive:true});
+</script>
+</body>
+</html>
