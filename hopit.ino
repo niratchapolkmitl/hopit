@@ -1,5 +1,5 @@
-#include <Wire.h>
 #include <LiquidCrystal_I2C.h>
+#include <Wire.h>
 
 LiquidCrystal_I2C lcd(0x27, 16, 2);
 
@@ -18,7 +18,7 @@ byte frog_walk[8] = {
 };
 byte frog_jump[8] = {
   0b01010,
-  0b10101,
+  0b10101,e
   0b11111,
   0b10001,
   0b11111,
@@ -67,7 +67,7 @@ float getDistance() {
   delayMicroseconds(10);
   digitalWrite(trig, LOW);
   
-  long duration = pulseIn(echo, HIGH, 10000); // กันค้าง - timeout 30ms
+  long duration = pulseIn(echo, HIGH, 30000); // กันค้าง - timeout 30ms
   if (duration == 0) return 999; //อ่านค่าไม่ได้ให้คืนค่าไกล
   return (duration * 0.0343) / 2.0;
 }
@@ -194,7 +194,7 @@ void loop() {
 
   // draw things
   for (int i = 0; i < Max_things; i++) {
-    if (thingActive[i] && thingsX[i] >= 0 && thingsX[i] <= 15) {
+    if (thingActive[i] && thingsX[i] >= g0 && thingsX[i] <= 15) {
       lcd.setCursor(thingsX[i],thingsY[i]);
       if (thingsY[i] == 1) {
         lcd.write(2);
