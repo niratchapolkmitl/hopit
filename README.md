@@ -11,6 +11,7 @@ HOPIT เป็นโครงงานเกมโต้ตอบที่พ�
 ## Website
 
 ## Clip VDO
+https://youtu.be/VLvtjKpB4-o
 
 ## อุปกรณ์
 - Arduino R4 UNO WIFI
